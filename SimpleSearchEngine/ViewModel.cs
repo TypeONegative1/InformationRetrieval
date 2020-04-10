@@ -1,17 +1,8 @@
 ﻿using Npgsql;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace SimpleSearchEngine
@@ -20,8 +11,9 @@ namespace SimpleSearchEngine
     {
         private ImageSource background;
         private UserQueryModel userQueryModel;
-        private string windowName;
+        private string windowName = "Поиск кино";
         private ObservableCollection<MovieModel> movies;
+        private readonly string _pswd;
 
         public ImageSource Background { get => background; set => SetField(ref background, value); }
         public UserQueryModel UserQueryModel { get => userQueryModel; set => SetField(ref userQueryModel, value); }
@@ -31,6 +23,10 @@ namespace SimpleSearchEngine
 
         public ViewModel()
         {
+            var e = new Password.PasswordWindow();
+            e.ShowDialog();
+            _pswd = e.pswd.Password;
+
             UserQueryModel = new UserQueryModel();
 #if egg
             UserQueryModel.CultFound += UserQueryModel_CultFound;
@@ -44,14 +40,18 @@ namespace SimpleSearchEngine
         {
             if (string.IsNullOrWhiteSpace(UserQueryModel.SearchField))
                 return;
-            string connstring = "Server=127.0.0.1; Port=5432; User Id=postgres; Password=1; Database=simplesearchengine;";
+            string connstring = "Server=127.0.0.1; " +
+                "Port=5432; " +
+                "User Id=postgres; " +
+                $"Password={_pswd}; " +
+                "Database=simplesearchengine;";
             var connection = new NpgsqlConnection(connstring);
             connection.Open();
             var commandText = SqlCommandBuilder.BuildByFts(UserQueryModel.ConvertedToTsQuery);
             NpgsqlCommand command = new NpgsqlCommand(commandText, connection);
             NpgsqlDataReader dataReader = command.ExecuteReader();
 
-            await QueryDB(dataReader); //next is to find she sho
+            await QueryDB(dataReader);
 
             if (Movies.Count != 0)
             {
